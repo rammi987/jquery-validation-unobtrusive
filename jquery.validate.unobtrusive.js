@@ -9,7 +9,8 @@
 (function ($) {
     var $jQval = $.validator,
         adapters,
-        data_validation = "unobtrusiveValidation";
+        data_validation = "unobtrusiveValidation",
+        coreSettings;
 
     function setValidationValues(options, ruleName, value) {
         options.rules[ruleName] = value;
@@ -36,53 +37,6 @@
             value = value.replace("*.", prefix);
         }
         return value;
-    }
-
-    function onError(error, inputElement) {  // 'this' is the form element
-        var container = $(this).find("[data-valmsg-for='" + escapeAttributeValue(inputElement[0].name) + "']"),
-            replaceAttrValue = container.attr("data-valmsg-replace"),
-            replace = replaceAttrValue ? $.parseJSON(replaceAttrValue) !== false : null;
-
-        container.removeClass("field-validation-valid").addClass("field-validation-error");
-        error.data("unobtrusiveContainer", container);
-
-        if (replace) {
-            container.empty();
-            error.removeClass("input-validation-error").appendTo(container);
-        }
-        else {
-            error.hide();
-        }
-    }
-
-    function onErrors(event, validator) {  // 'this' is the form element
-        var container = $(this).find("[data-valmsg-summary=true]"),
-            list = container.find("ul");
-
-        if (list && list.length && validator.errorList.length) {
-            list.empty();
-            container.addClass("validation-summary-errors").removeClass("validation-summary-valid");
-
-            $.each(validator.errorList, function () {
-                $("<li />").html(this.message).appendTo(list);
-            });
-        }
-    }
-
-    function onSuccess(error) {  // 'this' is the form element
-        var container = error.data("unobtrusiveContainer");
-
-        if (container) {
-            var replaceAttrValue = container.attr("data-valmsg-replace"),
-                replace = replaceAttrValue ? $.parseJSON(replaceAttrValue) : null;
-
-            container.addClass("field-validation-valid").removeClass("field-validation-error");
-            error.removeData("unobtrusiveContainer");
-
-            if (replace) {
-                container.empty();
-            }
-        }
     }
 
     function onReset(event) {  // 'this' is the form element
@@ -114,32 +68,11 @@
         var $form = $(form),
             result = $form.data(data_validation),
             onResetProxy = $.proxy(onReset, form),
-            defaultOptions = $jQval.unobtrusive.options || {},
-            execInContext = function (name, args) {
-                var func = defaultOptions[name];
-                func && $.isFunction(func) && func.apply(form, args);
-            }
+            defaultOptions = $jQval.unobtrusive.options || {};
 
         if (!result) {
             result = {
-                options: {  // options structure passed to jQuery Validate's validate() method
-                    errorClass: defaultOptions.errorClass || "input-validation-error",
-                    errorElement: defaultOptions.errorElement || "span",
-                    errorPlacement: function () {
-                        onError.apply(form, arguments);
-                        execInContext("errorPlacement", arguments);
-                    },
-                    invalidHandler: function () {
-                        onErrors.apply(form, arguments);
-                        execInContext("invalidHandler", arguments);
-                    },
-                    messages: {},
-                    rules: {},
-                    success: function () {
-                        onSuccess.apply(form, arguments);
-                        execInContext("success", arguments);
-                    }
-                },
+                options: coreSettings,
                 attachValidation: function () {
                     $form
                         .off("reset." + data_validation, onResetProxy)
@@ -410,7 +343,14 @@
         }
     });
 
-    $(function () {
+    $.fn.jqueryvalidatorunobtrusive = function(options) {
+        coreSettings = $.extend(options, {  // options structure passed to jQuery Validate's validate() method
+            errorClass: "input-validation-error",
+            errorElement: "span",
+            messages: {},
+            rules: {}
+        });
+
         $jQval.unobtrusive.parse(document);
-    });
+    };
 }(jQuery));
